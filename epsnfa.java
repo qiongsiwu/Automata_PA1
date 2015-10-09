@@ -1,4 +1,4 @@
-/* 
+/*
  * Converting regular expression into Epsilon-NFA
  * Author: Chenguang Zhu
  * CS154, Stanford University
@@ -10,72 +10,118 @@ public class epsnfa{
 	static int maxn = 200; //maximum number of states
 	static int symbol = 2; //number of symbols ('0','1')
 	static int epssymbol = 2;
-	
-	
+
+
 	//g[s1][i][s2]=true if and only if there's an edge with symbol i from state s1 to s2
 	//i: 0 is '0', 1 is '1', 2 is epsilon
 	//For fixed state s1 and a symbol c, it is not necessary to exist s2 such that
 	//g[s1][c][s2]=true. If no such s2 exists, we deem that getting c at state s1 will
-	//make the Epsilon-NFA go into a non-final "dead" state and will directly make the 
+	//make the Epsilon-NFA go into a non-final "dead" state and will directly make the
 	//the string not accepted.
 	boolean [][][] g = new boolean[maxn][symbol+1][maxn];
-	
+
 	//closure[s1][s2] is true if and only if s2 is in CL(s1)
 	boolean [][] closure = new boolean[maxn][maxn];
-	
+
 	//next[i]=i if the regular expression at position i is not '('
 	//next[i]=j if the regular expression at position i is '(' and jth position holds the corresponding ')'
 	int [] next;
-	
+
 	int state=0;  //current number of states
-	
+
+	void printMachine ()
+	{
+		for (int i = 0; i < state; i++)
+		{
+			for (int j = 0; j < symbol + 1; j++)
+			{
+				for (int k = 0; k < state; k++)
+				{
+					if (g[i][j][k])
+					{
+						System.out.println(i + " " + j + " " + k);
+					}
+				}
+			}
+		}
+	}
+
 	//add edge from s1 to s2 with symbol c
 	void addEdge(int s1,int c,int s2)
 	{
 		g[s1][c][s2]=true;
+		//System.out.println ("Edge added: " + s1 + c + s2);
 	}
-	
+
 	//increase the number of states of NFA by 1
 	int incCapacity()
 	{
+		//System.out.println("Increasing state by 1...");
 		int i,j;
 		for (i=0; i<=state; ++i)
 			for (j=0; j<=symbol; ++j)
 				g[i][j][state]=g[state][j][i]=false;
 		return (state++);
 	}
-	
+
 	//unite two Epsilon-NFAs, with start state s1 and s2, final state t1 and t2, respectively
-	//return an array of length 2, where the first element is the start state of the combined NFA. the second being the final state 
+	//return an array of length 2, where the first element is the start state of the combined NFA. the second being the final state
 	int[] union(int s1,int t1,int s2,int t2)
 	{
+		//System.out.println("Uninon of two NFAs .....................");
+
 		int [] st=new int[2];
 
 		//Please fill in the program here
-		
+		st[0] = incCapacity();
+		st[1] = incCapacity();
+
+		addEdge(st[0], 2, s1);
+		addEdge(st[0], 2, s2);
+		addEdge(t1, 2, st[1]);
+		addEdge(t2, 2, st[1]);
+
 		return st;
 	}
-	
+
 	//concatenation of two Epsilon-NFAs, with start state s1 and s2, final state t1 and t2, respectively
-	//return an array of length 2, where the first element is the start state of the combined NFA. the second being the final state 
+	//return an array of length 2, where the first element is the start state of the combined NFA. the second being the final state
 	int[] concat(int s1,int t1,int s2,int t2)
 	{
+		//System.out.println("Cocat machines............................................");
+
 		int [] st=new int[2];
 		//Please fill in the program here
-		
+
+		addEdge(t1, 2, s2);
+
+		st[0] = s1;
+		st[1] = t2;
+
+		//printMachine();
+
 		return st;
 	}
-	
+
 	//Closure of a Epsilon-NFA, with start state s and final state t
-	//return an array of length 2, where the first element is the start state of the closure Epsilon-NFA. the second being the final state 
+	//return an array of length 2, where the first element is the start state of the closure Epsilon-NFA. the second being the final state
 	int[] clo(int s,int t)
 	{
+		//System.out.println("Closure of an NFA.............................................");
 		int [] st=new int[2];
 		//Please fill in the program here
-		
+
+		st[0] = incCapacity();
+		st[1] = incCapacity();
+
+		addEdge(st[0], 2, st[1]);
+		addEdge(st[0], 2, s);
+		addEdge(t, 2, st[1]);
+		addEdge(t, 2, s);
+
 		return st;
 	}
-	
+
 	//Calculate the closure: CL()
 	void calc_closure(){
 		int [] queue = new int[maxn];
@@ -83,7 +129,7 @@ public class epsnfa{
 		for (i=0; i<state; ++i){
 			for (j=0; j<state; ++j)
 				closure[i][j]=false;
-			
+
 			//Breadth First Search
 			head=-1;
 			tail=0;
@@ -101,15 +147,15 @@ public class epsnfa{
 			}
 		}
 	}
-	
-	//parse a regular expression from position s to t, returning the corresponding 
+
+	//parse a regular expression from position s to t, returning the corresponding
 	//Epsilon-NFA. The array of length 2 contains the start state at the first position
 	//and the final state at the second position
     int[] parse(String re, int s, int t)
 	{
 		int [] st;
 		int i;
-		
+
 		//single symbol
 		if (s==t)
 		{
@@ -121,20 +167,20 @@ public class epsnfa{
 			else addEdge(st[0],re.charAt(s)-'0',st[1]);
 			return st;
 		}
-		
+
 		//(....)
 		if ((re.charAt(s)=='(')&&(re.charAt(t)==')'))
 		{
 			if (next[s]==t)
 				return parse(re,s+1,t-1);
 		}
-		
+
 		//RE1+RE2
 		i=s;
 		while (i<=t)
 		{
 			i=next[i];
-			
+
 			if ((i<=t)&&(re.charAt(i)=='+'))
 			{
 				int [] st1=parse(re,s,i-1);
@@ -144,13 +190,13 @@ public class epsnfa{
 			}
 			++i;
 		}
-		
+
 		//RE1.RE2
 		i=s;
 		while (i<=t)
 		{
 			i=next[i];
-			
+
 			if ((i<=t)&&(re.charAt(i)=='.'))
 			{
 				int [] st1=parse(re,s,i-1);
@@ -160,14 +206,14 @@ public class epsnfa{
 			}
 			++i;
 		}
-		
+
 		//(RE)*
 		assert(re.charAt(t)=='*');
 		int [] st1=parse(re,s,t-1);
 		st=clo(st1[0],st1[1]);
-		return st; 
+		return st;
 	}
-	
+
 	//calculate the corresponding ')' of '('
 	void calc_next(String re)
 	{
@@ -194,7 +240,7 @@ public class epsnfa{
 			else next[i]=i;
 		}
 	}
-	
+
 	boolean test(boolean [] cur, int finalstate, int level, int len, int num)
 	{
 		boolean[] next=new boolean[state];
@@ -214,7 +260,7 @@ public class epsnfa{
 							next[k]=(next[k] || closure[j][k]);
 					}
 			}
-		
+
 		boolean empty=true; //test if the state set is already empty
 		for (i=0; i<state; ++i)
 			if (next[i])
@@ -223,7 +269,7 @@ public class epsnfa{
 			return false;
 		return test(next,finalstate,level+1,len,num);
 	}
-	
+
 	public String Start(String filename)
 	{
 		String result="";
@@ -236,14 +282,19 @@ public class epsnfa{
 			String re; //regular expression
 			//Read File Line By Line
 			while ((re = br.readLine()) != null) {
-				
-				System.out.println ("Processing "+re+"...");				
+
+				System.out.println ("Processing "+re+"...");
 				calc_next(re);
 				state=0;
 				int[] nfa=parse(re,0,re.length()-1);
+
+				//System.out.println("Final macine...........................");
+				//printMachine();
+				//System.out.println(nfa[0] + " " + nfa[1]);
+
 				//calculate closure
 				calc_closure();
-				
+
 				//test 01 string of length up to 6
 				for (int len=1; len<=6; ++len)
 					for (int num=0; num<(1<<len); ++num)
@@ -267,11 +318,11 @@ public class epsnfa{
 		}catch (Exception e){//Catch exception if any
 			result=result+"error\n";//System.err.println("Error: " + e.getLocalizedMessage());
 		}
-		
+
 		return result;
 	}
-	
+
 	public static void main(String args[]) {
-		new epsnfa().Start("testRE.in");
+		new epsnfa().Start("sampleRE.in");
 	}
 }
